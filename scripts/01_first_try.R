@@ -12,7 +12,10 @@
 # 
 #########################################################################
 
-t <- 15        # the length of time this program estimate
+library('tidyverse')
+library('broom')
+
+t <- 15          # the length of time this program estimate
 k <- 1           # the flow time and fractional flow time is in Lk-norm
 Njobs <- 100     # how many job in this program
 
@@ -41,7 +44,7 @@ for (i in 1:Njobs) {
 
 d <- job[,4]
 I <- diag(nrow = Njobs)
-A <- rbind(-d, I, -I, I)
+A <- rbind(-d, I, -I, -I)
 
 f <- job[,3] - job[,5]
 
@@ -54,7 +57,7 @@ for(j in 1:t) {
     
     N <- length(x)
     
-    cv <- (1:N - job[,2]) / job[,3] + 1
+    cv <- (j - job[,2]) / job[,3] + 1
     
     cv %*% x
     
@@ -64,15 +67,23 @@ for(j in 1:t) {
     
     N <- length(x)
     
-    cv <- (1:N - job[,2]) / job[,3] + 1
+    cv <- (j - job[,2]) / job[,3] + 1
     
-    cv %*% rep(1, N)
+    cv #%*% rep(1, N)
     
   }
   
   b <- c(-1, rep(0, Njobs), rep(-1, Njobs), -f)
+  # theta = rep(10, Njobs)
+  theta = optim(par = rep(0, 100),
+                fn = function(x) {sum(A %*% x - b)})
   
-  xopt <- constrOptim(theta = rep(0.01, Njobs), 
+  
+  theta$par
+  
+  print(min(theta$par))
+  
+  xopt <- constrOptim(theta = theta$par, 
                    f = fr, 
                    grad = grr,
                    ui = A, 
