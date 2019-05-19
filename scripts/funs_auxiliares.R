@@ -73,15 +73,16 @@ hessiana <- function(f, x) {
 backtracking <- function(alpha, beta, f, dir_desc, x, derivada_direccional) {
   
   # In:
-    # alpha, beta parámetros del método por backtracking
-    # f función de Rn a R a minimizar
-    # dir_desc dirección de descenso en el punto x
-    # x punto en el que se buscará el tamaño de paso para la dirección de descenso dada
-    # grad_f gradiente de f en x
+  # alpha, beta parámetros del método por backtracking
+  # f función de Rn a R a minimizar
+  # dir_desc dirección de descenso en el punto x
+  # x punto en el que se buscará el tamaño de paso para la dirección de descenso dada
+  # grad_f gradiente de f en x
   # Out: 
-    # t tamaño de paso
+  # t tamaño de paso
+  optim
   
-  t <- 1
+  t <- 0.001
   
   if(alpha > 0.5) {
     print('alpha de backtracking debe ser menor o igual a 1/2')
@@ -116,37 +117,161 @@ backtracking <- function(alpha, beta, f, dir_desc, x, derivada_direccional) {
   
 }
 
-newton_Axib <- function(f, A, b, x_ast, p_ast, x0, tol, tol_backtracking, maxiter) {
+
+
+newton_Axib <- function(f, x_ast, p_ast, x0, tol, tol_backtracking, maxiter) {
   
   # Entrada:
-    # f: función a encontrar el mínimo. Definida como una function handle
-    # A y b: matriz y lado derecho del conjunto de restricciones de igualdad del problema
-    # de optimización (Ax = b)
-    # x_ast: solución de min f(x) sujeto a: Ax=b.
-    # p_ast: valor óptimo de f: p_ast = f(x_ast)
-    # x0: aproximaciones iniciales a x_ast (mínimo de f) para los algoritmos
-    # tol: para el criterio de paro. Típicamente menor o igual a 1e-8. Controla decremento en x 
-    # tol_backtracking: para backtracking. Típicamente menor o igual a 1e-14. Controla actualización de x.
-    # maxiter: máximo número de iteraciones a realizar.
+  # f: función a encontrar el mínimo. Definida como una function handle
+  # x_ast: solución de min f(x) sujeto a: Ax=b.
+  # p_ast: valor óptimo de f: p_ast = f(x_ast)
+  # x0: aproximaciones iniciales a x_ast (mínimo de f) para los algoritmos
+  # tol: para el criterio de paro. Típicamente menor o igual a 1e-8. Controla decremento en x 
+  # tol_backtracking: para backtracking. Típicamente menor o igual a 1e-14. Controla actualización de x.
+  # maxiter: máximo número de iteraciones a realizar.
   # Salida:
-    # x: aproximación a x_ast
-    # iter: número de iteraciones realizadas (para gráficas de monitoreo)
-    # Err_plot: error medido como error absoluto o relativo respecto a p_ast (para gráficas de monitoreo)
-    # x_plot: vector de aproximaciones (para gráficas de monitoreo)
+  # x: aproximación a x_ast
+  # iter: número de iteraciones realizadas (para gráficas de monitoreo)
+  # Err_plot: error medido como error absoluto o relativo respecto a p_ast (para gráficas de monitoreo)
+  # x_plot: vector de aproximaciones (para gráficas de monitoreo)
   
+  library('pracma')
+  
+  iter <- 1
+  x <- x0
+  
+  # Evaluaciones
+  feval <- f(x)
+  gfeval <- gradiente(f, x)
+  Hfeval <- hessiana(f, x)
+  
+  normagf <- norm(gfeval, type = '2')
+  condHf <- kappa(Hfeval, exact = TRUE)
+  
+  Err_plot_aux <- matrix(rep(0, maxiter), ncol = 1)
+  Err_plot_aux[iter] <- abs(feval - p_ast)
+  
+  if(norm(x_ast, type = '2') > 1e-300) {
+    Err <- norm(x_ast - x, type = '2') / norm(x_ast, type = '2')
+  } else {
+    Err <- norm(x_ast - x, type = '2')
+  }
+  
+  n <- length(x)
+  x_plot_aux <- matrix(rep(0, maxiter * n), nrow = n)
+  x_plot <- matrix(rep(0, maxiter * n), nrow = n)
+  x_plot[,1] <- x
+  
+  alpha <- 0.15 # parámetro para el bactracking
+  beta <- 0.5 # parámetro para el bactracking
+  
+  # Definición decremento en x:
+  # print(Hfeval)
+  dir_Newton <- solve(Hfeval, -gfeval)
+  lambda_cuadrada <- t(dir_Newton) %*% (Hfeval %*% dir_Newton)
+  
+  fprintf('Iter      Normagf     Decremento_en_x     Error_x_ast   Error_p_ast    backtracking_result  Condición_Hf\n')
+  fprintf('%3i   %1.6e     %1.6e     %1.6e     %1.6e     %s             %1.6e\n',
+          iter, normagf, lambda_cuadrada, Err, Err_plot_aux[iter], '---', condHf);
+  
+  criterio_de_paro <- lambda_cuadrada / 2
+  contador <- 1
+  
+  while(criterio_de_paro > tol & iter < maxiter) {
+    derivada_direccional = -lambda_cuadrada
+    t <- backtracking(alpha = alpha, beta = beta, f = f, dir_desc = dir_Newton,
+                      x = x, derivada_direccional = derivada_direccional)
+    x <- x + t*dir_Newton
+    feval <- f(x)
+    
+    gfeval <- gradiente(f, x)
+    Hfeval <- hessiana(f, x)
+    normagf <- norm(gfeval, type = '2')
+    condHf <- kappa(Hfeval, exact = TRUE)
+    # print(Hfeval)
+    dir_Newton <- solve(Hfeval, -gfeval)
+    lambda_cuadrada <- t(dir_Newton) %*% (Hfeval %*% dir_Newton)
+    
+    if(norm(x_ast, type = '2') > 1e-300) {
+      Err <- norm(x_ast - x, type = '2') / norm(x_ast, type = '2')
+    } else {
+      Err <- norm(x_ast - x, type = '2')
+    }
+    
+    iter <- iter + 1
+    Err_plot_aux[iter] <- abs(feval - p_ast)
+    x_plot_aux[,iter-1] <- x
+    
+    if(contador %% 100 == 0)
+      fprintf('%3i   %1.6e     %1.6e     %1.6e     %1.6e     %1.6e    %1.6e\n',
+              iter, normagf, lambda_cuadrada, Err, Err_plot_aux[iter], t, condHf);
+    
+    criterio_de_paro <- lambda_cuadrada / 2
+    
+    if(t < tol_backtracking) {
+      iter_salida <- iter
+      iter <- maxiter
+    }
+    contador <- contador + 1
+  }
+  
+  fprintf('Error utilizando valor de x_ast: %1.6e\n', Err)
+  fprintf('Valor aproximado a x_ast:\n')
+  print(x)
+  Err_plot <- Err_plot_aux[which(abs(Err_plot_aux) > 1e-300)]
+  
+  helper <- matrix(rep(0, maxiter * n), nrow = n)
+  for(i in 1: ncol(x_plot_aux)) {
+    helper[,i] <- x_plot_aux[,i] - x_ast
+  }
+  
+  if(norm(x_ast, type = '2') > 1e-300) {
+    aux_diferencia_x_plot_aux <- (helper) / norm(x_ast, type = '2')
+  } else {
+    aux_diferencia_x_plot_aux <- helper
+  }
+  
+  
+  index <- which(apply(aux_diferencia_x_plot_aux, 1, function(x) norm(x ,type = '2')) > 1e-300  & rowSums(x_plot_aux) != 0)
+  index2 <- apply(aux_diferencia_x_plot_aux, 1, function(x) norm(x ,type = '2')) > 1e-300 & rowSums(x_plot_aux) != 0
+  
+  if(sum(index) != 0) {
+    x_plot[,2:(2+sum(index2)-1)] <- x_plot_aux[,index]
+  }
+  
+  if(iter == maxiter & t < tol_backtracking) {
+    disp('Valor de backtracking menor a tol_backtracking, revisar aproximación')
+    iter <- iter_salida
+  }
   
   
   return(list(x = x, iter = iter, Err_plot = Err_plot, x_plot = x_plot))
   
-}
+} 
 
 
+# fx <- function(x) {
+#   sum((x+1)^2) 
+# }
+# gradiente(fx, c(2,2))
+# hessiana(fx, c(2,2))
+
+gamma_cte <- 10;
 fx <- function(x) {
-  sum(x^2)
+  0.5 * (x[1]^2 + gamma_cte*x[2]^2)
 }
 
-gradiente(fx, c(2,2))
-hessiana(fx, c(2,2))
+x_ast <- matrix(c(0,0), ncol = 1)
+x0 <- matrix(c(100,100), ncol = 1)
+tol <- 1e-14
+tol_backtracking <- 1e-14
+maxiter <- 30
+p_ast <- fx(x_ast)
 
+
+resultados <- newton_Axib(fx, x_ast,p_ast,x0,tol,tol_backtracking,maxiter)
+
+plot(1:resultados$iter, resultados$Err_plot)
+plot(resultados$x_plot[1,], resultados$x_plot[2,])
 
 
