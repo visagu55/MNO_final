@@ -1,12 +1,18 @@
 tol <- 1e-6
 tol_backtracking <- 1e-14
-maxiter <- 10000
+maxiter <- 5000
 mu <- 2
+
+f_penal <- function(x) {
+  max(0,x)
+}
 
 # Problema 1 -------------------------------------------------------------
 t0 <- 10;
 fx <- function(x) {
-  t0*(2*x[1]+5*x[2]) - log(x[1]+x[2]-6) - log(18-x[1]-2*x[2]) - log(x[1]) - log(x[2])
+  a <- 2*x[1]+5*x[2]
+  t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) -
+    1e10 * (x[1] + x[2]) + 1e10 * (18-x[1]-2*x[2])
 }
 
 solucion <- c(0,0)
@@ -14,6 +20,9 @@ solucion <- c(0,0)
 x_ast <- c(6,0.01)
 x0 <- c(15,1)
 p_ast <- fx(x_ast)
+
+### Método de barrera logarítmica:
+### Truena porque los logaritmos intentan evaluar valores negativos.
 
 while(4/t0 > tol) {
   
@@ -26,15 +35,59 @@ while(4/t0 > tol) {
   t0 <- t0*mu
   
   fx <- function(x) {
-    t0*(2*x[1]+5*x[2]) - log(x[1]+x[2]-6) - log(18-x[1]-2*x[2]) - log(x[1]) - log(x[2])
+    t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) 
+  }
+  
+}
+
+### Lo modificamos con penalización
+
+
+
+# Problema 2 -------------------------------------------------------------
+mu <- 100
+t0 <- 10;
+fx <- function(x) {
+  t0*(x[1]^2 + x[2]^2 + x[3]^2 - x[4]^2 - 2*x[1] - 3*x[4] - 
+        log(2*x[1] + x[2] + x[3] + 4*x[4] - 6) -
+        log(-(2*x[1] + x[2] + x[3] + 4*x[4] - 6)) -
+        log(x[1] + x[2] + 2*x[3] + x[4] - 6) -
+        log(-(x[1] + x[2] + 2*x[3] + x[4] - 6)) -
+        log(x[1]) - log(x[2]) - log(x[3]) - log(x[4]) -
+        log(-x[1]) - log(-x[2]) - log(-x[3]) - log(-x[4]))
+}
+
+solucion <- c(0,0,0,0)
+
+x_ast <- c(1.1232876712328763,0.6506849315068493,1.8287671232876714,0.5684931506849317)
+x0 <- c(0,8,-1,0)
+p_ast <- fx(x_ast)
+
+while(12/t0 > tol) {
+  
+  resultados <- newton_Axib(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(x[1]^2 + x[2]^2 + x[3]^2 - x[4]^2 - 2*x[1] - 3*x[4] - 
+          log(2*x[1] + x[2] + x[3] + 4*x[4] - 6) -
+          log(-(2*x[1] + x[2] + x[3] + 4*x[4] - 6)) -
+          log(x[1] + x[2] + 2*x[3] + x[4] - 6) -
+          log(-(x[1] + x[2] + 2*x[3] + x[4] - 6)) -
+          log(x[1]) - log(x[2]) - log(x[3]) - log(x[4]) -
+          log(-x[1]) - log(-x[2]) - log(-x[3]) - log(-x[4]))
   }
   
 }
 
 
-
-mu <- 10
 # Problema 3 -------------------------------------------------------------
+mu <- 10
 t0 <- 10;
 fx <- function(x) {
   t0*(x[1]^2 + (x[2] + 1)^2) - log(x[1]) - log(x[2])
