@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1558807852730.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "549FB086",
+    "lastKnownWriteTime" : 1558820296,
+    "last_content_update" : 1558820296573,
+    "path" : "~/Maestria/06 MNO/Proyecto_final/MNO_final/scripts/ejercicios_barrera_logaritmica.R",
+    "project_path" : "scripts/ejercicios_barrera_logaritmica.R",
+    "properties" : {
+        "cursorPosition" : "24,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
