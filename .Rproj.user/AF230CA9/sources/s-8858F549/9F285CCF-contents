@@ -1,0 +1,9 @@
+f <- function(x) {
+  
+  unos <- matrix(rep(1, numofjob), ncol = 1)
+  
+  sum(fft * x) +
+    lambda * t(job[,6]) %*% (t(job[,3] - job[,5] - x) * (window * unos - job[,2])) +
+    sum(x*x) / 100
+  
+}

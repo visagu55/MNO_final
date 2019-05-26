@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1558886365842.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "0|29|26|0|\n51|28|91|0|\n93|41|114|0|\n",
+    "hash" : "0",
+    "id" : "4E6311D",
+    "lastKnownWriteTime" : 1558892420,
+    "last_content_update" : 1558892420573,
+    "path" : "~/Maestria/06 MNO/Proyecto_final/MNO_final/scripts/auxiliares_pruebas.R",
+    "project_path" : "scripts/auxiliares_pruebas.R",
+    "properties" : {
+        "cursorPosition" : "44,4",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

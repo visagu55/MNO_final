@@ -1,5 +1,6 @@
 
 library('tidyverse')
+source('scripts/auxiliares_pruebas.R')
 
 window <- 12 # ¿Cuánto tiempo tenemos para analizar el sistema?
 k <- 1  # the flow time and fractional flow time is in Lk-norm
