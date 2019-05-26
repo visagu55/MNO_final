@@ -1,7 +1,7 @@
 
 library('tidyverse')
 
-t <- 12 # ¿Cuánto tiempo tenemos para analizar el sistema?
+window <- 12 # ¿Cuánto tiempo tenemos para analizar el sistema?
 k <- 1  # the flow time and fractional flow time is in Lk-norm
 numofjob <- 6 # número de tareas simuladas
 lambda <- 400 # lambda necesaria incremental del problema dual
@@ -15,7 +15,7 @@ time <- 1:t
 # 6 whether arrive, 
 # 7 finish time of oco
 job           <- matrix(rep(0, 7*numofjob), ncol = 7) 
-schedule      <- matrix(rep(0, t*numofjob), ncol = t) # the scheduling result of this oco method
+schedule      <- matrix(rep(0, window*numofjob), ncol = window) # the scheduling result of this oco method
 fft           <- matrix(rep(0, numofjob), nrow = 1) # fractional flow time
 ocofractional <- matrix(rep(0, t), ncol = 1) # the fractional flow time of each time
 ocoflow       <- matrix(rep(0, t), ncol = 1) # the flow time of each time
@@ -35,7 +35,7 @@ job[,4] <- rep(1, 6) # CPU
 # }
 
 # this part is for online convex optimization
-for(j in 1:t) {
+for(j in 1:window) {
   
   print(j)
   
@@ -60,11 +60,58 @@ for(j in 1:t) {
   #         x <= job(:,3)-job(:,5); %el faltante
   # cvx_end
   
-  fx <- function()
+  f <- function(x) {
+    
+    unos <- matrix(rep(1, numofjob), ncol = 1)
+    
+    sum(fft * x) +
+      lambda * t(job[,6]) %*% ((job[,3] - job[,5] - x) * (window * unos - job[,2])) +
+      sum(x*x) / 100
+    
+  }
   
+  f_rest <- list(f1 = function(x) job[,4] %*% x - 1, 
+              f2 = function(x) -(18-x[1]-2*x[2]), 
+              f3 = function(x) -x[1], 
+              f4 = function(x) -x[2])  
   
+  f_rest <- list(function(x) job[,4] %*% x - 1)
   
+  for(i in 1:numofjob) {
+    f_rest[[i+1]] <- function(x) x[i] - 1
+  }
   
+  for(i in 1:numofjob) {
+    f_rest[[numofjob+i+1]] <- function(x) -x[i]
+  }
+  
+  # for(i in 1:numofjob) {
+    # f_rest[[2*numofjob+i+1]] <- function(x) x[i] - job[,3] + job[,5]
+  # }
+  # f_rest[[2*numofjob+2]] <- function(x) x - job[,3] + job[,5]
+  
+  l <- length(f_rest)
+  
+  names(f_rest) <- paste0('f', 1:l)
+  
+  x_ast <- rep(0, numofjob)
+  x0 <- rep(0.1, numofjob)
+  tol_outer_iter = 1e-6
+  tol_inner_iter = 1e-5
+  tol_backtracking = 1e-14
+  maxiter_path = 30
+  maxiter_Newton = 30
+  mu = 10
+  
+  p_ast = f(x_ast)
+  # p_ast <- 12
+  
+  a <- path_following(f = f, f_rest = f_rest, x_ast = x_ast, p_ast = p_ast, 
+                      x0 = x0, tol_outer_iter = tol_outer_iter,
+                      tol_inner_iter = tol_inner_iter,
+                      tol_backtracking = tol_backtracking, 
+                      maxiter_path = maxiter_path,
+                      maxiter_Newton = maxiter_Newton, mu = mu)
   
   
 }

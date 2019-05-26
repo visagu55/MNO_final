@@ -1,85 +1,27 @@
-tol <- 1e-6
-tol_backtracking <- 1e-14
-maxiter <- 10000
-mu <- 10
-
+x_ast <- c(6,0)
+x0 <- c(4,4)
+tol_outer_iter = 1e-6
+tol_inner_iter = 1e-5
+tol_backtracking = 1e-14
+maxiter_path = 30
+maxiter_Newton = 30
+mu = 10
 
 # Problema 1 -------------------------------------------------------------
-t0 <- 0.28
-fx <- function(x) {
-  t0*(2*x[1]+5*x[2]) - log(x[1]+x[2]-6) - log(18-x[1]-2*x[2]) - log(x[1]) - log(x[2]) 
+f <- function(x) {
+  2*x[1]+5*x[2]
 }
 
-# f_rest <- function(x) {
-f_rest <- c(function(x) -(x[1]+x[2]-6), 
-            function(x) -(18-x[1]-2*x[2]), 
-            function(x) -x[1], 
-            function(x) -x[2])
-# }
+f_rest <- c(f1 = function(x) -(x[1]+x[2]-6), 
+            f2 = function(x) -(18-x[1]-2*x[2]), 
+            f3 = function(x) -x[1], 
+            f4 = function(x) -x[2])
 
-solucion <- c(0,0)
 
-x_ast <- c(6,0.01)
-x0 <- c(15,1)
-p_ast <- 12
+a <- path_following(f, f_rest, A, b, x_ast, p_ast, x0, tol_outer_iter,
+                    tol_inner_iter, tol_backtracking, maxiter_path, maxiter_Newton, mu)
 
-### Método de barrera logarítmica:
-### Truena porque los logaritmos intentan evaluar valores negativos.
-
-while(4/t0 > tol) {
-  
-  resultados <- newton.sin.rest(f = fx, t0 = t0, f_rest = f_rest, x_ast = x_ast,
-                                p_ast = p_ast, x0 = x0, tol = tol, 
-                                tol_backtracking = tol_backtracking,
-                                maxiter = maxiter)
-  
-  solucion <- resultados$x
-  t0 <- t0*mu
-  
-  fx <- function(x) {
-    t0*(2*x[1]+5*x[2]) - log(x[1]+x[2]-6) - log(18-x[1]-2*x[2]) - log(x[1]) - log(x[2]) 
-  }
-  
-  f_rest <- c(function(x) -(x[1]+x[2]-6), 
-              function(x) -(18-x[1]-2*x[2]), 
-              function(x) -x[1], 
-              function(x) -x[2])
-  
-}
-
-### Lo modificamos con penalización
-# Problema 1 -------------------------------------------------------------
-t0 <- 10;
-fx <- function(x) {
-  t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) -
-    1e10 * (x[1] + x[2]) + 1e10 * (18-x[1]-2*x[2])
-}
-
-solucion <- c(0,0)
-
-x_ast <- c(6,0.01)
-x0 <- c(15,1)
-p_ast <- fx(x_ast)
-
-### Método de barrera logarítmica:
-### Truena porque los logaritmos intentan evaluar valores negativos.
-
-while(4/t0 > tol) {
-  
-  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
-                                tol = tol, tol_backtracking = tol_backtracking,
-                                maxiter = maxiter)
-  
-  solucion <- resultados$x
-  
-  t0 <- t0*mu
-  
-  fx <- function(x) {
-    t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) -
-      1e10 * (x[1] + x[2]) + 1e10 * (18-x[1]-2*x[2])
-  }
-  
-}
+a
 
 
 # Problema 2 -------------------------------------------------------------
@@ -125,65 +67,43 @@ while(12/t0 > tol) {
 
 
 # Problema 3 -------------------------------------------------------------
-mu <- 10
-t0 <- 10;
-fx <- function(x) {
-  t0*(x[1]^2 + (x[2] + 1)^2) - log(x[1]) - log(x[2])
+
+f <- function(x) {
+  x[1]^2 + (x[2] + 1)^2
 }
+
+f_rest <- c(f1 = function(x) -x[1], 
+            f2 = function(x) -x[2])
 
 solucion <- c(0,0)
 
 x_ast <- c(0.01,0.01)
 x0 <- c(5,5)
-p_ast <- fx(x_ast)
+p_ast <- f(x_ast)
 
-while(2/t0 > tol) {
-  
-  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
-                            tol = tol, tol_backtracking = tol_backtracking,
-                            maxiter = maxiter)
-  
-  solucion <- resultados$x
-  
-  t0 <- t0*mu
-  
-  fx <- function(x) {
-    t0*(x[1]^2 + (x[2] + 1)^2) - log(x[1]) - log(x[2])
-  }
-  
-}
+a <- path_following(f, f_rest, A, b, x_ast, p_ast, x0, tol_outer_iter,
+                    tol_inner_iter, tol_backtracking, maxiter_path, maxiter_Newton, mu)
+
+a
 
 # Problema 4 -------------------------------------------------------------
-t0 <- 10;
-fx <- function(x) {
-  t0*(exp(x[1]+3*x[2]-0.1)+exp(x[1]-3*x[2]-0.1)+exp(-x[1]-0.1)) - log(1-(x[1]-1)^2-(x[2]-0.25)^2)
+f <- function(x) {
+  exp(x[1]+3*x[2]-0.1)+exp(x[1]-3*x[2]-0.1)+exp(-x[1]-0.1)
 }
 
-solucion <- c(0,0)
+f_rest <- c(f1 = function(x) -(1-(x[1]-1)^2-(x[2]-0.25)^2))
 
-x_ast <- c(1,0.25)
-x0 <- c(1,0.25)
-p_ast <- fx(x_ast)
+x_ast <- c(0.28,0.014)
+x0 <- c(1,1)
+p_ast <- f(x_ast)
 
-while(1/t0 > tol) {
-  
-  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
-                            tol = tol, tol_backtracking = tol_backtracking,
-                            maxiter = maxiter)
-  
-  solucion <- resultados$x
-  
-  t0 <- t0*mu
-  
-  fx <- function(x) {
-    t0*(exp(x[1]+3*x[2]-0.1)+exp(x[1]-3*x[2]-0.1)+exp(-x[1]-0.1)) - log(1-(x[1]-1)^2-(x[2]-0.25)^2)
-  }
-  
-}
+a <- path_following(f, f_rest, A, b, x_ast, p_ast, x0, tol_outer_iter,
+                    tol_inner_iter, tol_backtracking, maxiter_path, maxiter_Newton, mu)
+
+a
 
 
 # Problema 5 -------------------------------------------------------------
-t0 <- 10;
 X <- matrix(c(0.91177,-1.15847,0.54351,
               2.27585,-0.31595,-0.10009,
               -0.13817,-0.43913,-0.99416,

@@ -28,7 +28,7 @@ mu = 10
 p_ast = f(x_ast)
 # p_ast <- 12
 
-a <- path_following(f, f_rest, A, b, x_ast, p_ast, x0, tol_outer_iter,
+a <- path_following(f, f_rest, x_ast, p_ast, x0, tol_outer_iter,
                tol_inner_iter, tol_backtracking, maxiter_path, maxiter_Newton, mu)
 
 a

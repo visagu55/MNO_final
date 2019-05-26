@@ -40,7 +40,8 @@ gradiente_rest <- function(f_rest, x_val) {
   for (i in 1:m) {
     f_rest_componente <- f_rest[[i]]
     grad_f_rest_componente_eval <- gradiente(f_rest_componente, x_val)
-    gf_rest <- gf_rest - grad_f_rest_componente_eval / f_rest_componente(x_val)
+    # gf_rest <- gf_rest - grad_f_rest_componente_eval / f_rest_componente(x_val)
+    gf_rest <- gf_rest - grad_f_rest_componente_eval / as.vector(f_rest_componente(x_val))
   }
   
   return(gf_rest)
@@ -104,7 +105,8 @@ hessiana_rest <- function(f_rest,x_val) {
     gf_rest_componente_eval  <- gradiente(f_rest_componente, x_val)
     hf_rest_componente_eval <- hessiana(f_rest_componente, x_val)
     f_rest_componente_eval <- f_rest_componente(x_val)
-    hf_rest <- hf_rest + gf_rest_componente_eval %*% t(gf_rest_componente_eval) / (f_rest_componente_eval^2) - hf_rest_componente_eval / f_rest_componente_eval
+    # hf_rest <- hf_rest + gf_rest_componente_eval %*% t(gf_rest_componente_eval) / (f_rest_componente_eval^2) - hf_rest_componente_eval / f_rest_componente_eval
+    hf_rest <- hf_rest + gf_rest_componente_eval %*% t(gf_rest_componente_eval) / as.vector(f_rest_componente_eval^2) - hf_rest_componente_eval / as.vector(f_rest_componente_eval)
   }
   
   return(hf_rest)
@@ -215,15 +217,15 @@ newton.sin.rest <- function(f, t0, f_rest, x_ast, p_ast, x0, tol, tol_backtracki
   # Err_plot: error medido como error absoluto o relativo respecto a p_ast (para gráficas de monitoreo)
   # x_plot: vector de aproximaciones (para gráficas de monitoreo)
   
-  library('pracma')
-  
   iter <- 1
   x <- x0
   
   # Evaluaciones
   feval <- f(x)
-  gfeval <- t0*gradiente(f, x) + gradiente_rest(f_rest, x)
-  Hfeval <- t0*hessiana(f, x) + hessiana_rest(f_rest, x)
+  # gfeval <- t0*gradiente(f, x) + gradiente_rest(f_rest, x)
+  # Hfeval <- t0*hessiana(f, x) + hessiana_rest(f_rest, x)
+  gfeval <- as.vector(t0)*gradiente(f, x) + gradiente_rest(f_rest, x)
+  Hfeval <- as.vector(t0)*hessiana(f, x) + hessiana_rest(f_rest, x)
   
   normagf <- norm(gfeval, type = '2')
   condHf <- kappa(Hfeval, exact = TRUE)
@@ -331,7 +333,7 @@ newton.sin.rest <- function(f, t0, f_rest, x_ast, p_ast, x0, tol, tol_backtracki
   
 } 
 
-path_following <- function(f, f_rest, A, b, x_ast, p_ast, x0, 
+path_following <- function(f, f_rest, x_ast, p_ast, x0, 
                            tol_outer_iter, tol_inner_iter, tol_backtracking, 
                            maxiter_path, maxiter_Newton, mu) {
   
