@@ -1,0 +1,101 @@
+clc;
+t = 12;          % ¿cuánto tiempo tenemos para analizar el sistema? Aquí podemos hacer un criterio de paro, que sea en ccuanto todas las tareas terminen de ser ejecutadas
+k = 1;           % the flow time and fractional flow time is in Lk-norm
+numofjob = 6;   % número de tareas simuladas
+lamda = 400;      % lambda necesaria incremental del problema dual
+time = 1:t;
+
+job = zeros(numofjob,7); % id, arrive time, size , cpu, finish rate, whether arrive, finish time of oco, finish time of SJF 
+schedule = zeros(numofjob,t); % the scheduling result of this oco method
+fft = zeros(1,numofjob); % fractional flow time
+ocofractional = zeros(t,1);  % the fractional flow time of each time
+ocoflow = zeros(t,1);        % the flow time of each time
+
+job(:,1)=[1; 2; 3; 4; 5; 6]; %ID
+job(:,2)=[0; 0; 0; 0; 0; 0]; %arrive_time %Aquí estoy inicializando todos como ceros para el problema offline
+job(:,3)=[0.1; 0.2; 1; 3; 0.5; 0.8]; %size
+job(:,4)=[1; 1; 1; 1; 1; 1]; %CPU
+
+%Aquí simula la información para el problema online.
+%{
+for i = 1:numofjob
+    job(i,1) = i;
+    if i == 1
+        job(i,2) = 0;
+    end
+    if i > 1
+        job(i,2) = job(i-1,2) + round(rand(1));
+    end
+    job(i,3) = (round(rand(1)*5)+1)/2;
+    job(i,4) = round(rand(1),1);
+end
+%}
+
+% this part is for online convex optimization
+for j = 1:t
+    for i = 1:numofjob
+        if job(i,2) >= j
+            fft(1,i) = 0;      
+            job(i,6) = 0;            %not arrive
+        else
+            fft(1,i) = (j-job(i,2))^k/job(i,3) + job(i,3)^(k-1);
+            job(i,6) = 1;            %arrive
+        end
+    end
+    
+    % resolviendo con discipline convex optimization
+    cvx_begin quiet
+        variable x(numofjob)
+        minimize(fft * x + lamda * job(:,6)' * ((job(:,3)-job(:,5)-x ).* (t*ones(numofjob,1)-job(:,2))) + (x'*x)/100)
+        subject to
+            job(:,4)'* x <= 1;
+            x <= ones(numofjob,1);
+            x >= zeros(numofjob,1);
+            x <= job(:,3)-job(:,5); %el faltante
+    cvx_end
+    
+    % update the finish rate of each job
+    x = round(x,1);
+    job(:,5) = job(:,5) + x;
+ 
+    %update lamda
+    lamda = lamda +  k*5 * job(:,6)' * (job(:,3)-job(:,5)-x );
+    schedule(:,j) = x;
+    
+    %compute the fractional flow time of each job
+    if j >1
+        ocofractional(j,1) = ocofractional(j-1,1) + fft * x;
+    else
+        ocofractional(j,1) =  fft * x;
+    end
+    
+    %compute the finish time of each job
+    for i = 1:numofjob
+        if x(i) > 0
+            if job(i,5) >= job(i,3)
+                job(i,7) = j;
+            end
+        end
+    end
+    
+    % compute the flow time
+    for i = 1:numofjob
+        if job(i,7) > 0 && job(i,7) <= j
+            ocoflow(j,1) = ocoflow(j,1) + (job(i,7) - job(i,2))^k;
+        end
+    end 
+    fprintf('Iteración OCO %i\n', j);
+    fprintf('      Id   arrive_time   size      CPU   Finish_Rate Whether_arrive Finish_OCO\n');
+    disp(job);
+
+end
+
+% plot the flow time and fractional flow time of our method and shortest job first    
+plot(time, ocoflow,'r-', 'LineWidth', 2)
+hold on
+plot(time, ocofractional,'b-', 'LineWidth', 2)
+xlabel('Time slot', 'FontSize', 6, 'FontWeight','bold')
+ylabel('Overall flow time', 'FontSize', 6, 'FontWeight','bold')
+set(gca,'fontsize',6)
+legend('OCO flowtime', 'OCO fractional flowtime','FontSize', 6, 'Location', 'Northwest')
+hold off

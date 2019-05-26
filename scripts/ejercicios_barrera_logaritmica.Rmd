@@ -1,0 +1,516 @@
+---
+title: "MNO - Ejercicios adicionales (parcial 4)"
+author: "Vianney Sánchez y Juan B. Martínez Parente (Equipo 15)"
+date: "22 de mayo de 2019"
+output: html_document
+---
+
+## Introducción
+
+Implementamos en R las funciones que programó el profesor (aproximación del 
+gradiente, aproximación de la hessiana, método de _backtracking_ y método de
+Newton sin restricciones)para poder a su vez utilizarlas nosotros en una 
+implementación del método de barrera logarítmica:
+
+```{r, warning=FALSE, error=TRUE, include=FALSE}
+library('pracma')
+library('tidyverse')
+gradiente <- function(f, x) {
+  
+  # In:
+  # f función a la que se le calculará su gradiente
+  # x punto en el que se aproximará el gradiente de f
+  # Out:
+  # grad_f: aproximación al gradiente de f por diferencias centradas
+  
+  h      <- 1e-6
+  n      <- length(x)
+  grad_f <- matrix(rep(0, n), nrow = n)
+  xaux   <- x
+  xaux2  <- x
+  
+  for(i in 1:n) {
+    
+    xaux[i]   <- x[i] + h
+    xaux2[i]  <- x[i] - h
+    grad_f[i] <- (f(xaux) - f(xaux2)) / (2 * h)
+    xaux[i]   <- xaux[i] - h
+    xaux2[i]  <- xaux2[i] + h
+    
+  }
+  
+  return(grad_f)
+  
+}
+
+
+hessiana <- function(f, x) {
+  
+  # In:
+  # f función a la que se le calculará su Hessiana
+  # x punto en el que se aproximará la Hessiana de f
+  # Out:
+  # Hf: aproximación a la Hessiana de f por diferencias hacia delante
+  
+  h      <- 1e-5
+  n      <- length(x)
+  Hf     <- matrix(rep(0, n*n), nrow = n)
+  xaux_i <- x
+  xaux_j <- x
+  
+  for(i in 1:n) {
+    
+    xaux_i[i] <- xaux_i[i] + h
+    xaux_ij   <- x
+    
+    for(j in i:n) {
+      
+      xaux_j[j]  <- xaux_j[j] + h
+      xaux_ij[j] <- xaux_i[j] + h
+      dif1       <- f(xaux_ij) - f(xaux_i) 
+      dif2       <- f(xaux_j) - f(x)
+      Hf[i,j]    <- (dif1 - dif2) / (h * h)
+      
+      if(j != i) Hf[j,i] <- (dif1 - dif2) / (h * h)
+      
+      xaux_j[j]  <- xaux_j[j] - h
+      xaux_ij[j] <- xaux_ij[j] - h
+      
+    }
+    
+    xaux_i[i] <- xaux_i[i] - h
+    
+  }
+  
+  return(Hf)
+  
+}
+
+
+backtracking <- function(alpha, beta, f, dir_desc, x, derivada_direccional) {
+  
+  # In:
+  # alpha, beta parámetros del método por backtracking
+  # f función de Rn a R a minimizar
+  # dir_desc dirección de descenso en el punto x
+  # x punto en el que se buscará el tamaño de paso para la dirección de descenso dada
+  # grad_f gradiente de f en x
+  # Out: 
+  # t tamaño de paso
+  optim
+  
+  t <- 0.01
+  
+  if(alpha > 0.5) {
+    print('alpha de backtracking debe ser menor o igual a 1/2')
+    t <-  -1
+  }
+  
+  if(beta > 1) {
+    print('beta de backtracking debe ser menor a 1')
+    t <-  -1
+  }
+  
+  if(t != -1) {
+    
+    eval1 <- f(x + t * dir_desc)
+    eval2 <- f(x) + alpha * t * derivada_direccional
+    
+    while (eval1 > eval2) {
+      
+      t     <- beta * t
+      eval1 <- f(x + t * dir_desc)
+      eval2 <- f(x) + alpha * t * derivada_direccional
+      
+    }
+    
+  } else {
+    
+    t <- -1
+    
+  }
+  
+  return(t)
+  
+}
+
+
+
+newton.sin.rest <- function(f, x_ast, p_ast, x0, tol, tol_backtracking, maxiter) {
+  
+  # Entrada:
+  # f: función a encontrar el mínimo. Definida como una function handle
+  # x_ast: solución de min f(x) sujeto a: Ax=b.
+  # p_ast: valor óptimo de f: p_ast = f(x_ast)
+  # x0: aproximaciones iniciales a x_ast (mínimo de f) para los algoritmos
+  # tol: para el criterio de paro. Típicamente menor o igual a 1e-8. Controla decremento en x 
+  # tol_backtracking: para backtracking. Típicamente menor o igual a 1e-14. Controla actualización de x.
+  # maxiter: máximo número de iteraciones a realizar.
+  # Salida:
+  # x: aproximación a x_ast
+  # iter: número de iteraciones realizadas (para gráficas de monitoreo)
+  # Err_plot: error medido como error absoluto o relativo respecto a p_ast (para gráficas de monitoreo)
+  # x_plot: vector de aproximaciones (para gráficas de monitoreo)
+  
+    iter <- 1
+  x <- x0
+  
+  # Evaluaciones
+  feval <- f(x)
+  gfeval <- gradiente(f, x)
+  Hfeval <- hessiana(f, x)
+  
+  normagf <- norm(gfeval, type = '2')
+  condHf <- kappa(Hfeval, exact = TRUE)
+  
+  Err_plot_aux <- matrix(rep(0, maxiter), ncol = 1)
+  Err_plot_aux[iter] <- abs(feval - p_ast)
+  
+  if(norm(x_ast, type = '2') > 1e-300) {
+    Err <- norm(x_ast - x, type = '2') / norm(x_ast, type = '2')
+  } else {
+    Err <- norm(x_ast - x, type = '2')
+  }
+  
+  n <- length(x)
+  x_plot_aux <- matrix(rep(0, maxiter * n), nrow = n)
+  x_plot <- matrix(rep(0, maxiter * n), nrow = n)
+  x_plot[,1] <- x
+  
+  alpha <- 0.15 # parámetro para el bactracking
+  beta <- 0.5 # parámetro para el bactracking
+  
+  # Definición decremento en x:
+  # print(Hfeval)
+  dir_Newton <- solve(Hfeval, -gfeval)
+  lambda_cuadrada <- t(dir_Newton) %*% (Hfeval %*% dir_Newton)
+  
+  fprintf('Iter      Normagf     Decremento_en_x     Error_x_ast   Error_p_ast    backtracking_result  Condición_Hf\n')
+  fprintf('%3i   %1.6e     %1.6e     %1.6e     %1.6e     %s             %1.6e\n',
+          iter, normagf, lambda_cuadrada, Err, Err_plot_aux[iter], '---', condHf);
+  
+  criterio_de_paro <- lambda_cuadrada / 2
+  contador <- 1
+  
+  while(criterio_de_paro > tol & iter < maxiter) {
+    derivada_direccional = -lambda_cuadrada
+    t <- backtracking(alpha = alpha, beta = beta, f = f, dir_desc = dir_Newton,
+                      x = x, derivada_direccional = derivada_direccional)
+    x <- x + t*dir_Newton
+    feval <- f(x)
+    
+    gfeval <- gradiente(f, x)
+    Hfeval <- hessiana(f, x)
+    normagf <- norm(gfeval, type = '2')
+    condHf <- kappa(Hfeval, exact = TRUE)
+    # print(Hfeval)
+    dir_Newton <- solve(Hfeval, -gfeval)
+    lambda_cuadrada <- t(dir_Newton) %*% (Hfeval %*% dir_Newton)
+    
+    if(norm(x_ast, type = '2') > 1e-300) {
+      Err <- norm(x_ast - x, type = '2') / norm(x_ast, type = '2')
+    } else {
+      Err <- norm(x_ast - x, type = '2')
+    }
+    
+    iter <- iter + 1
+    Err_plot_aux[iter] <- abs(feval - p_ast)
+    x_plot_aux[,iter-1] <- x
+    
+    if(contador %% 500 == 0)
+      fprintf('%3i   %1.6e     %1.6e     %1.6e     %1.6e     %1.6e    %1.6e\n',
+              iter, normagf, lambda_cuadrada, Err, Err_plot_aux[iter], t, condHf);
+    
+    criterio_de_paro <- lambda_cuadrada / 2
+    
+    if(t < tol_backtracking) {
+      iter_salida <- iter
+      iter <- maxiter
+    }
+    contador <- contador + 1
+  }
+  
+  fprintf('Error utilizando valor de x_ast: %1.6e\n', Err)
+  fprintf('Valor aproximado a x_ast:\n')
+  print(x)
+  Err_plot <- Err_plot_aux[which(abs(Err_plot_aux) > 1e-300)]
+  
+  helper <- matrix(rep(0, maxiter * n), nrow = n)
+  for(i in 1: ncol(x_plot_aux)) {
+    helper[,i] <- x_plot_aux[,i] - x_ast
+  }
+  
+  if(norm(x_ast, type = '2') > 1e-300) {
+    aux_diferencia_x_plot_aux <- (helper) / norm(x_ast, type = '2')
+  } else {
+    aux_diferencia_x_plot_aux <- helper
+  }
+  
+  
+  index <- which(apply(aux_diferencia_x_plot_aux, 1, function(x) norm(x ,type = '2')) > 1e-300  & rowSums(x_plot_aux) != 0)
+  index2 <- apply(aux_diferencia_x_plot_aux, 1, function(x) norm(x ,type = '2')) > 1e-300 & rowSums(x_plot_aux) != 0
+  
+  if(sum(index) != 0) {
+    x_plot[,2:(2+sum(index2)-1)] <- x_plot_aux[,index]
+  }
+  
+  if(iter == maxiter & t < tol_backtracking) {
+    disp('Valor de backtracking menor a tol_backtracking, revisar aproximación')
+    iter <- iter_salida
+  }
+  
+  
+  return(list(x = x, iter = iter, Err_plot = Err_plot, x_plot = x_plot))
+  
+} 
+```
+
+```{r, warning=FALSE, error=TRUE}
+tol <- 1e-6
+tol_backtracking <- 1e-14
+maxiter <- 5000
+```
+
+
+## Ejercicios 1 y 2
+
+En el caso de los ejercicios 1 y 2 ocurrió el problema de que el argumento de
+alguno de los logaritmos podía ser negativo debido al tamaño de paso del método
+de _backtracking_. El profesor nos sugirió penalizar las funciones de 
+restricción, pero no logramos dar con la forma correcta de hacerlo.
+
+### Primera solución del ejercicio 1
+
+Notar en el código de arriba que cambiamos el tamaño de paso a $t=0.001$ (antes
+era $t=1$). Con esta modificación, el algoritmo truena. Sin embargo, si observamos
+la salida del último modelo resuelto, podemos ver que logramos llegar al
+resultado, aunque con demasiadas iteraciones y el error.
+
+```{r, warning=FALSE, error=TRUE}
+mu <- 2
+t0 <- 10;
+fx <- function(x) {
+  a <- 2*x[1]+5*x[2]
+  t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) 
+}
+
+solucion <- c(0,0)
+
+x_ast <- c(6,0.01)
+x0 <- c(15,1)
+p_ast <- fx(x_ast)
+
+### Método de barrera logarítmica:
+### Truena porque los logaritmos intentan evaluar valores negativos.
+
+while(4/t0 > tol) {
+  
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) 
+  }
+  
+}
+```
+
+### Segunda solución del ejercicio 1
+
+Intentamos penalizando las restricciones, pero aparentemente no es la forma 
+correcta, ya que aparece un error que indica un sistema singular.
+
+```{r, warning=FALSE, error=TRUE}
+t0 <- 10;
+fx <- function(x) {
+  t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) -
+    1e10 * (x[1] + x[2]) + 1e10 * (18-x[1]-2*x[2])
+}
+
+solucion <- c(0,0)
+
+x_ast <- c(6,0.01)
+x0 <- c(15,1)
+p_ast <- fx(x_ast)
+
+### Método de barrera logarítmica:
+### Truena porque los logaritmos intentan evaluar valores negativos.
+
+while(4/t0 > tol) {
+  
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                                tol = tol, tol_backtracking = tol_backtracking,
+                                maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(2*x[1]+5*x[2]) - log((x[1]+x[2]-6)) - log((18-x[1]-2*x[2])) - log(x[1]) - log(x[2]) -
+      1e10 * (x[1] + x[2]) + 1e10 * (18-x[1]-2*x[2])
+  }
+  
+}
+```
+
+### Solución del ejercicio 2
+
+No tuvimos tiempo de implementar el método de Newton para problemas con 
+restricciones de igualdad, así que pensamos que podría ser útil que a partir de
+una restricción de la forma $f_i(x) = 0$ se plantearan dos restricciones:
+$f_i(x)\leq 0$ y $f_i(x)\geq 0$ y con éstas usar el método que ya teníamos
+implementado. No obstante, ocurre un error.
+
+```{r, warning=FALSE, error=TRUE}
+mu <- 100
+t0 <- 10;
+fx <- function(x) {
+  t0*(x[1]^2 + x[2]^2 + x[3]^2 - x[4]^2 - 2*x[1] - 3*x[4] - 
+        log(2*x[1] + x[2] + x[3] + 4*x[4] - 7) -
+        log(-(2*x[1] + x[2] + x[3] + 4*x[4] - 7)) -
+        log(x[1] + x[2] + 2*x[3] + x[4] - 6) -
+        log(-(x[1] + x[2] + 2*x[3] + x[4] - 6)) -
+        log(x[1]) - log(x[2]) - log(x[3]) - log(x[4]) -
+        log(-x[1]) - log(-x[2]) - log(-x[3]) - log(-x[4]))
+}
+
+solucion <- c(0,0,0,0)
+
+x_ast <- c(1.1232876712328763,0.6506849315068493,1.8287671232876714,0.5684931506849317)
+x0 <- c(0,8,-1,0)
+p_ast <- fx(x_ast)
+
+while(12/t0 > tol) {
+  
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(x[1]^2 + x[2]^2 + x[3]^2 - x[4]^2 - 2*x[1] - 3*x[4] - 
+          log(2*x[1] + x[2] + x[3] + 4*x[4] - 6) -
+          log(-(2*x[1] + x[2] + x[3] + 4*x[4] - 6)) -
+          log(x[1] + x[2] + 2*x[3] + x[4] - 6) -
+          log(-(x[1] + x[2] + 2*x[3] + x[4] - 6)) -
+          log(x[1]) - log(x[2]) - log(x[3]) - log(x[4]) -
+          log(-x[1]) - log(-x[2]) - log(-x[3]) - log(-x[4]))
+  }
+  
+}
+```
+
+
+## Ejercicio 3
+
+```{r, warning=FALSE, error=TRUE}
+mu <- 10
+t0 <- 10;
+fx <- function(x) {
+  t0*(x[1]^2 + (x[2] + 1)^2) - log(x[1]) - log(x[2])
+}
+
+solucion <- c(0,0)
+
+x_ast <- c(0.01,0.01)
+x0 <- c(5,5)
+p_ast <- fx(x_ast)
+
+while(2/t0 > tol) {
+  
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(x[1]^2 + (x[2] + 1)^2) - log(x[1]) - log(x[2])
+  }
+  
+}
+```
+
+## Ejercicio 4
+
+```{r, warning=FALSE, error=TRUE}
+mu <- 10
+t0 <- 10;
+fx <- function(x) {
+  t0*(exp(x[1]+3*x[2]-0.1)+exp(x[1]-3*x[2]-0.1)+exp(-x[1]-0.1)) - log(1-(x[1]-1)^2-(x[2]-0.25)^2)
+}
+
+solucion <- c(0,0)
+
+x_ast <- c(1,0.25)
+x0 <- c(1,0.25)
+p_ast <- fx(x_ast)
+
+while(1/t0 > tol) {
+  
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  
+  t0 <- t0*mu
+  
+  fx <- function(x) {
+    t0*(exp(x[1]+3*x[2]-0.1)+exp(x[1]-3*x[2]-0.1)+exp(-x[1]-0.1)) - log(1-(x[1]-1)^2-(x[2]-0.25)^2)
+  }
+  
+}
+
+```
+
+## Ejercicio 5
+
+```{r, warning=FALSE, error=TRUE}
+mu <- 10
+t0 <- 10;
+X <- matrix(c(0.91177,-1.15847,0.54351,
+              2.27585,-0.31595,-0.10009,
+              -0.13817,-0.43913,-0.99416,
+              0.20257,0.55622,-0.28660, 
+              0.56596,0.54013,1.45889),
+            byrow = T, ncol = 3)
+
+y <- matrix(c(1.4339,5.4793,-5.7085,1.1300,9.1538), ncol = 1)
+
+fx <- function(beta) {
+  t0*(sum((X %*% beta - y)^2)) - log(beta[1]) - log(beta[2])- log(beta[3]) 
+}
+
+solucion <- c(0,0,0)
+
+x_ast <- c(2.9999862, 3.00001679, 3.99997103)
+x0 <- rep(1,3)
+p_ast <- fx(x_ast)
+
+while(3/t0 > tol) {
+  resultados <- newton.sin.rest(f = fx, x_ast = x_ast, p_ast = p_ast, x0 = x0, 
+                            tol = tol, tol_backtracking = tol_backtracking,
+                            maxiter = maxiter)
+  
+  solucion <- resultados$x
+  t0 <- t0*mu
+  fx <- function(beta) {
+    t0*(sum((X %*% beta - y)^2)) - log(beta[1]) - log(beta[2])- log(beta[3]) 
+  }
+}
+
+
+```
+

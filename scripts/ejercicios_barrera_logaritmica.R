@@ -1,11 +1,11 @@
 tol <- 1e-6
 tol_backtracking <- 1e-14
 maxiter <- 10000
-mu <- 2
+mu <- 10
 
 
 # Problema 1 -------------------------------------------------------------
-t0 <- 10;
+t0 <- 0.28
 fx <- function(x) {
   t0*(2*x[1]+5*x[2]) - log(x[1]+x[2]-6) - log(18-x[1]-2*x[2]) - log(x[1]) - log(x[2]) 
 }
@@ -21,7 +21,7 @@ solucion <- c(0,0)
 
 x_ast <- c(6,0.01)
 x0 <- c(15,1)
-p_ast <- fx(x_ast)
+p_ast <- 12
 
 ### Método de barrera logarítmica:
 ### Truena porque los logaritmos intentan evaluar valores negativos.
